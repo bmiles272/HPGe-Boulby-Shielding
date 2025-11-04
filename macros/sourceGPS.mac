@@ -1,0 +1,34 @@
+/run/initialize
+
+/gps/particle ion
+/gps/ion 84 214 0 0
+/gps/number 1
+
+
+/gps/pos/type Volume
+/gps/pos/confine logicCu1
+
+/gps/ang/type iso
+/gps/ene/type Mono
+/gps/ene/mono 0.0 MeV
+# /gps/source/intensity 1.0
+
+
+/vis/open OGL 800x800
+/vis/viewer/set/autoRefresh true
+/vis/drawVolume
+/vis/viewer/set/background white
+/vis/viewer/set/style surface
+/vis/viewer/set/viewpointThetaPhi 30 30
+/vis/viewer/zoom 1.4
+
+/tracking/storeTrajectory 1
+/vis/scene/add/trajectories smooth
+/vis/scene/add/hits
+/vis/scene/endOfEventAction accumulate
+
+/process/verbose 1
+/tracking/verbose 1
+
+/run/beamOn 500
+

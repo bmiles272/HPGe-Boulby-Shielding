@@ -1,0 +1,9 @@
+/control/verbose 1
+/run/verbose 1
+
+/geometry/setInnerCu1Thickness 1 cm
+/geometry/setInnerCu2Thickness 2 cm
+/geometry/setOuterPb1Thickness 5 cm
+/geometry/setOuterPb2Thickness 10 cm
+
+/run/initialize
