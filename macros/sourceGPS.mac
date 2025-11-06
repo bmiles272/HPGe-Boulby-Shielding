@@ -22,10 +22,12 @@
 /vis/viewer/set/viewpointThetaPhi 30 30
 /vis/viewer/zoom 1.4
 
+
 /tracking/storeTrajectory 1
 /vis/scene/add/trajectories smooth
 /vis/scene/add/hits
 /vis/scene/endOfEventAction accumulate
+/vis/scene/add/axes 0 0 0
 
 /process/verbose 1
 /tracking/verbose 1
