@@ -26,7 +26,7 @@ detectorShielding::detectorShielding()
    fOuterPb2Thickness(150*mm),
    fCavityHalfX(50*mm),
    fCavityHalfY(10*mm),
-   fCavityHalfZ(60*mm),
+   fCavityHalfZ(50*mm),
    fMessenger(nullptr)
 {
   // optional: create simple messenger for runtime control (safe if header included)
@@ -146,19 +146,19 @@ G4VPhysicalVolume* detectorShielding::DefineVolumes()
   hpgeVis->SetForceSolid(true);
   logicHPGe->SetVisAttributes(hpgeVis);
 
-  auto cu1Vis = new G4VisAttributes(G4Colour(0.8, 0.4, 0.1, 0.25));
+  auto cu1Vis = new G4VisAttributes(G4Colour(0.8, 0.4, 0.1, 0.2));
   cu1Vis->SetForceSolid(true);
   logicCu1->SetVisAttributes(cu1Vis);
 
-  auto cu2Vis = new G4VisAttributes(G4Colour(0.9, 0.5, 0.1, 0.25));
+  auto cu2Vis = new G4VisAttributes(G4Colour(0.9, 0.5, 0.1, 0.15));
   cu2Vis->SetForceSolid(true);
   logicCu2->SetVisAttributes(cu2Vis);
 
-  auto pb1Vis = new G4VisAttributes(G4Colour(0.4, 0.4, 0.4, 0.2));
+  auto pb1Vis = new G4VisAttributes(G4Colour(0.4, 0.4, 0.4, 0.15));
   pb1Vis->SetForceSolid(true);
   logicPb1->SetVisAttributes(pb1Vis);
 
-  auto pb2Vis = new G4VisAttributes(G4Colour(0.2, 0.2, 0.2, 0.15));
+  auto pb2Vis = new G4VisAttributes(G4Colour(0.2, 0.2, 0.2, 0.1));
   pb2Vis->SetForceSolid(true);
   logicPb2->SetVisAttributes(pb2Vis);
 

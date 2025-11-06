@@ -1,20 +1,31 @@
 /run/initialize
 
-/gps/particle ion
-/gps/ion 84 214 0 0
+#/gps/particle ion
+#/gps/ion 84 214 0 0
+#/gps/number 1
+#/gps/pos/type Volume
+#/gps/pos/confine LogicCu1
+
+/gps/particle e-
+/gps/energy 2 MeV
+
+/gps/pos/type Plane
+/gps/pos/shape Square
+/gps/pos/centre 0 0 28 cm
+/gps/pos/halfx 25 cm
+/gps/pos/halfy 25 cm
+/gps/pos/halfz 25 cm
 /gps/number 1
 
-
-/gps/pos/type Volume
-/gps/pos/confine logicCu1
-
-/gps/ang/type iso
-/gps/ene/type Mono
-/gps/ene/mono 0.0 MeV
+#/gps/ang/type iso
+/gps/ang/type planar
+/gps/ang/rot1 1 0 0
+/gps/ang/rot2 0 1 0
+/gps/direction 0 0 -1
 # /gps/source/intensity 1.0
 
 
-/vis/open OGL 800x800
+/vis/open OGL 1024x768
 /vis/viewer/set/autoRefresh true
 /vis/drawVolume
 /vis/viewer/set/background white
@@ -24,13 +35,13 @@
 
 
 /tracking/storeTrajectory 1
-/vis/scene/add/trajectories smooth
+/vis/scene/add/trajectories rich
 /vis/scene/add/hits
-/vis/scene/endOfEventAction accumulate
-/vis/scene/add/axes 0 0 0
+/vis/scene/endOfEventAction accumulate -1
+/vis/scene/add/axes 0 0 0 500 mm
 
-/process/verbose 1
-/tracking/verbose 1
+/process/verbose 0
+/tracking/verbose 0
 
-/run/beamOn 500
+/run/beamOn 1000
 
