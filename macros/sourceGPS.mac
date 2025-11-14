@@ -1,20 +1,24 @@
 /run/initialize
 
+/control/alias dist 500 mm
+
+/process/had/rdm/thresholdForVeryLongDecayTime 1.0e+60 year
+
 /gps/particle ion
-/gps/ion 84 214 0 0
+/gps/ion 92 238 0 0
+/gps/energy 0.0 MeV
 /gps/number 1
 
-
 /gps/pos/type Volume
-/gps/pos/confine logicCu1
-
+/gps/pos/shape Para
+/gps/pos/centre 0. 0. 0. cm
+/gps/pos/halfx {dist}
+/gps/pos/halfy {dist}
+/gps/pos/halfz {dist}
+/gps/pos/confine Cu2
 /gps/ang/type iso
-/gps/ene/type Mono
-/gps/ene/mono 0.0 MeV
-# /gps/source/intensity 1.0
 
-
-/vis/open OGL 800x800
+/vis/open OGL 1024x768
 /vis/viewer/set/autoRefresh true
 /vis/drawVolume
 /vis/viewer/set/background white
@@ -22,15 +26,14 @@
 /vis/viewer/set/viewpointThetaPhi 30 30
 /vis/viewer/zoom 1.4
 
-
 /tracking/storeTrajectory 1
-/vis/scene/add/trajectories smooth
+/vis/scene/add/trajectories rich
 /vis/scene/add/hits
-/vis/scene/endOfEventAction accumulate
-/vis/scene/add/axes 0 0 0
+/vis/scene/endOfEventAction accumulate -1
+/vis/scene/add/axes 0 0 0 500 mm
 
 /process/verbose 1
 /tracking/verbose 1
 
-/run/beamOn 500
+/run/beamOn 1
 
