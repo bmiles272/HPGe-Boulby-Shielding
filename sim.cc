@@ -38,6 +38,12 @@ int main(int argc, char** argv)
   physList->RegisterPhysics(new G4RadioactiveDecayPhysics());
   runManager->SetUserInitialization(physList);
   runManager->SetUserInitialization(new MyActionInitialization());
+  auto detector = new detectorShielding();
+  runManager->SetUserInitialization(detector);
+
+  auto generator = new MyPrimaryGenerator(detector);
+  runManager->SetUserAction(generator);
+
 
   runManager->Initialize();
 
@@ -53,24 +59,7 @@ int main(int argc, char** argv)
     G4String fileName = argv[1];
     UImanager->ApplyCommand(command + fileName);
   } else {
-    // interactive mode
-    
-    UImanager->ApplyCommand("/vis/open OGL 600x600");
-    UImanager->ApplyCommand("/vis/drawVolume");
-    UImanager->ApplyCommand("/vis/viewer/set/viewpointThetaPhi 30 30");
-    UImanager->ApplyCommand("/vis/viewer/zoom 1.5");
-    UImanager->ApplyCommand("/vis/viewer/set/style surface");
-    UImanager->ApplyCommand("/vis/viewer/set/background white");
-    
-    //UImanager->ApplyCommand("/vis/scene/add/axes 0 0 0 30 cm");
-
-    //UImanager->ApplyCommand("/tracking/storeTrajectory 1");
-    //UImanager->ApplyCommand("/vis/scene/add/trajectories rich");
-    //UImanager->ApplyCommand("/vis/scene/add/hits");
-    //UImanager->ApplyCommand("/vis/scene/endOfEventAction accumulate");
-    //UImanager->ApplyCommand("/vis/modeling/trajectories/create/drawByParticleID");
-    //UImanager->ApplyCommand("/vis/viewer/refresh");
-    //UImanager->ApplyCommand("/vis/viewer/set/autoRefresh true");
+  
     UImanager->ApplyCommand("/control/macroPath /home/bmiles/miniconda3/envs/geant4_env/share/Geant4/bramGeant4/hPGeShield/macros");
 
     UImanager->ApplyCommand("/control/execute sourceGPS.mac");

@@ -2,7 +2,21 @@
 
 /control/alias dist 500 mm
 
-/process/had/rdm/thresholdForVeryLongDecayTime 1.0e+60 year
+/Shielding/cavityHalfX 115
+/Shielding/cavityHalfY 225
+/Shielding/cavityHalfZ 115
+
+/Shielding/Cu1Thickness 5
+/Shielding/Cu2Thickness 20
+/Shielding/Pb1Thickness 50
+/Shielding/Pb2Thickness 150
+
+/Shielding/setTime 3.144e7 #1 year
+
+/Shielding/computeDecays 0 0.05
+/Shielding/computeDecays 1 1.0
+/Shielding/computeDecays 2 3.0
+/Shielding/computeDecays 3 20.0
 
 /gps/particle ion
 /gps/ion 92 238 0 0
@@ -34,6 +48,4 @@
 
 /process/verbose 1
 /tracking/verbose 1
-
-/run/beamOn 1
 

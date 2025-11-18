@@ -1,6 +1,8 @@
 #include "generator.hh"
+#include "detectorShielding.hh"
 
-MyPrimaryGenerator::MyPrimaryGenerator()
+MyPrimaryGenerator::MyPrimaryGenerator(const detectorShielding* det)
+    : fDetector(det)
 {
     fParticleSource = new G4GeneralParticleSource();
 }
@@ -21,4 +23,12 @@ void MyPrimaryGenerator::GeneratePrimaries(G4Event *anEvent)
     // fParticleGun->SetParticlePosition(G4ThreeVector(0., 0., 70*cm));
 
     fParticleSource->GeneratePrimaryVertex(anEvent);
+    G4double N = fDetector->GetTotalDecays();    
+    
+    if (anEvent->GetEventID() == 0)
+    {
+        G4cout << "[Generator] Total decays requested = " << N << G4endl;
+    }
+
+
 }

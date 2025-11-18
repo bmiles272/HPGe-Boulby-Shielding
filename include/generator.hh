@@ -7,16 +7,18 @@
 #include "G4SystemOfUnits.hh"
 #include "G4ParticleTable.hh"
 
+class detectorShielding;
+
 class MyPrimaryGenerator : public G4VUserPrimaryGeneratorAction
 {
 public:
-    MyPrimaryGenerator();
-    ~MyPrimaryGenerator();
-
+    MyPrimaryGenerator(const detectorShielding* det);
+    virtual ~MyPrimaryGenerator();
     virtual void GeneratePrimaries(G4Event*);
 
 private:
     G4GeneralParticleSource* fParticleSource;
+    const detectorShielding* fDetector;
 };
 
 #endif
