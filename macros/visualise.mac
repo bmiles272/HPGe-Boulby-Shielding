@@ -1,0 +1,31 @@
+/run/initialize
+
+/control/alias dist 500 mm
+
+/Shielding/cavityHalfX 50
+/Shielding/cavityHalfY 50
+/Shielding/cavityHalfZ 50
+
+/Shielding/Cu1Thickness 5
+/Shielding/Cu2Thickness 20
+/Shielding/Pb1Thickness 50
+/Shielding/Pb2Thickness 150
+
+/vis/open OGL 1024x768
+/vis/viewer/set/autoRefresh true
+/vis/drawVolume
+/vis/viewer/set/background white
+/vis/viewer/set/style surface
+/vis/viewer/set/viewpointThetaPhi 30 30
+/vis/viewer/zoom 1.4
+
+#/tracking/storeTrajectory 1
+#/vis/scene/add/trajectories rich
+#/vis/scene/add/hits
+/vis/scene/endOfEventAction accumulate -1
+/vis/scene/add/axes 0 0 0 500 mm
+
+/process/verbose 1
+/tracking/verbose 1
+
+/run/beamOn 1

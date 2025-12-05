@@ -1,0 +1,91 @@
+/run/initialize
+
+# geometry configuration
+/Shielding/cavityHalfX 115
+/Shielding/cavityHalfY 225  
+/Shielding/cavityHalfZ 115
+
+/Shielding/Cu1Thickness 5
+/Shielding/Cu2Thickness 20
+/Shielding/Pb1Thickness 50
+/Shielding/Pb2Thickness 150
+
+# sim time (3 hrs)
+/Shielding/setTime 10800
+#/Shielding/setTime 3.156e+7 #1year
+
+# set activity
+#/Shielding/setCu1Activity 5e-6
+#/Shielding/setCu2Activity 1e-5
+/Shielding/setPb1Activity 1
+#/Shielding/setPb2Activity 1e-5
+
+# Now configure GPS for each layer with proper confinement
+# Layer 1: Cu1
+#/gps/source/add 1
+/gps/particle ion
+/gps/ion 82 214 0 0 #Pb-214
+/gps/energy 0.0 MeV
+/gps/number 1
+/gps/pos/type Volume
+/gps/pos/shape Para
+/gps/pos/centre 0. 0. 0. mm
+/gps/pos/halfx 500 mm
+/gps/pos/halfy 500 mm  
+/gps/pos/halfz 500 mm
+/gps/pos/confine Pb1
+/gps/ang/type iso
+
+# Layer 2: Cu2
+#/gps/source/add 2
+#/gps/particle ion
+#/gps/ion 90 232 0 0 #th-232
+#/gps/energy 0.0 MeV
+#/gps/pos/type Volume
+#/gps/pos/shape Para
+#/gps/pos/centre 0. 0. 0. mm
+#/gps/pos/halfx 500 mm
+#/gps/pos/halfy 500 mm
+#/gps/pos/halfz 500 mm
+#/gps/pos/confine Cu2
+#/gps/ang/type iso
+
+# Layer 3: Pb1
+#/gps/source/add 3
+#/gps/particle ion
+#/gps/ion 19 40 0 0 #K-40
+#/gps/energy 0.0 MeV
+#/gps/pos/type Volume
+#/gps/pos/shape Para
+#/gps/pos/centre 0. 0. 0. mm
+#/gps/pos/halfx 500 mm
+#/gps/pos/halfy 500 mm
+#/gps/pos/halfz 500 mm
+#/gps/pos/confine Pb1
+#/gps/ang/type iso
+
+# Layer 4: Pb2
+#/gps/source/add 4
+#/gps/particle ion
+#/gps/ion 27 60 0 0 #cobalt-60
+#/gps/energy 0.0 MeV
+#/gps/pos/type Volume
+#/gps/pos/shape Para
+#/gps/pos/centre 0. 0. 0. mm
+#/gps/pos/halfx 500 mm
+#/gps/pos/halfy 500 mm
+#/gps/pos/halfz 500 mm
+#/gps/pos/confine Pb2
+#/gps/ang/type iso
+
+# Set source intensities (you can adjust these based on your activity calculations)
+##/gps/source/intensity Cu1 0.25
+##/gps/source/intensity Cu2 0.25
+##/gps/source/intensity Pb1 0.25  
+##/gps/source/intensity Pb2 0.25
+
+#/process/verbose 1
+#/tracking/verbose 1
+
+# automatically with computed decays
+/Shielding/autoBeamOn

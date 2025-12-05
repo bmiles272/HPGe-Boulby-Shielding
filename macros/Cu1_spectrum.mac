@@ -1,0 +1,42 @@
+
+/run/initialize
+
+# geometry configuration
+/Shielding/cavityHalfX 115
+/Shielding/cavityHalfY 225  
+/Shielding/cavityHalfZ 115
+
+/Shielding/Cu1Thickness 5
+/Shielding/Cu2Thickness 20
+/Shielding/Pb1Thickness 50
+/Shielding/Pb2Thickness 150
+
+# sim time (3 hrs)
+#/Shielding/setTime 10800
+
+/process/had/rdm/thresholdForVeryLongDecayTime 1.0e+60 year
+/Shielding/setDecays 1000000
+
+# set activity
+#/Shielding/setCu1Activity 5e-6
+
+# Now configure GPS for each layer with proper confinement
+# Layer 1: Cu1
+#/gps/source/add 1
+/gps/particle ion
+/gps/ion 90 232 0 0 #Th-232
+/gps/energy 0.0 MeV
+/gps/number 1
+/gps/pos/type Volume
+/gps/pos/shape Para
+/gps/pos/centre 0. 0. 0. mm
+/gps/pos/halfx 500 mm
+/gps/pos/halfy 500 mm  
+/gps/pos/halfz 500 mm
+/gps/pos/confine Cu1
+/gps/ang/type iso
+
+#/process/verbose 1
+#/tracking/verbose 1
+
+/Shielding/autoBeamOn

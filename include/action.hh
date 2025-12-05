@@ -7,9 +7,12 @@
 class MyActionInitialization : public G4VUserActionInitialization
 {
 public:
-    MyActionInitialization() ;
-    ~MyActionInitialization();
+    MyActionInitialization(detectorShielding* det);
+    virtual ~MyActionInitialization();
 
-    virtual void Build() const; //main function of program
+    virtual void Build() const override;
+    
+private:
+    detectorShielding* fDet;
 };
 #endif

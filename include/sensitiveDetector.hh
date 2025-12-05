@@ -4,18 +4,13 @@
 #include "G4VSensitiveDetector.hh"
 #include "G4Step.hh"
 #include "G4TouchableHistory.hh"
-#include <fstream>
-#include <map>
+#include "G4AnalysisManager.hh"
 
-struct GammaTrackData {
-  G4double totalLength = 0.0;
-  G4String finalVolume = "Unknown";
-};
 
 class SensitiveDetector : public G4VSensitiveDetector
 {
 public:
-  SensitiveDetector(const G4String& name, const G4String& outputFile);
+  SensitiveDetector(const G4String& name);
   ~SensitiveDetector() override;
 
   void Initialize(G4HCofThisEvent*) override;
@@ -23,8 +18,9 @@ public:
   void EndOfEvent(G4HCofThisEvent*) override;
 
 private:
-  std::ofstream fOutFile;
-  std::map<G4int, GammaTrackData> fTrackData;  // trackID → data, many per event
+  G4double fTotalEnergyDeposit; 
+  G4int fNHits;
+  
 };
 
 #endif

@@ -3,6 +3,7 @@
 #include "G4SystemOfUnits.hh"
 #include "G4NistManager.hh"
 #include "G4Box.hh"
+#include "G4Tubs.hh"
 #include "G4LogicalVolume.hh"
 #include "G4PVPlacement.hh"
 #include "G4VisAttributes.hh"
@@ -13,26 +14,30 @@
 #include "G4SubtractionSolid.hh"
 #include "G4PhysicalVolumeStore.hh"
 #include "G4RunManager.hh"
+#include "G4LogicalVolumeStore.hh"
+#include "G4RotationMatrix.hh"
 
 // ------------------------------------------------------------
 // Constructor
 // ------------------------------------------------------------
 detectorShielding::detectorShielding()
  : G4VUserDetectorConstruction(),
-   fHPGeHalfX(115*mm),
-   fHPGeHalfY(225*mm),
-   fHPGeHalfZ(115*mm),
+   fHPGeHeight(45*mm),
+   fHPGeDiam(46.5*mm),
    fInnerCu1Thickness(5*mm),
    fInnerCu2Thickness(20*mm),
    fOuterPb1Thickness(50*mm),
    fOuterPb2Thickness(150*mm),
    fCavityHalfX(50*mm),
-   fCavityHalfY(10*mm),
-   fCavityHalfZ(60*mm),
+   fCavityHalfY(50*mm),
+   fCavityHalfZ(50*mm),
    fSimTime(0),
+   fTotalDecays(0),
    fGeometryDirty(false),
    fMessenger(nullptr)
 {
+    G4cout << "[DEBUG] Registering setLayerActivity command" << G4endl;
+
     layerMap["Cu1"]  = 0;
     layerMap["Cu2"] = 1;
     layerMap["Pb1"] = 2;
@@ -47,21 +52,30 @@ detectorShielding::detectorShielding()
         .SetGuidance("Set the simulation time in seconds.")
         .SetParameterName("time", false);
 
-    /*// /Shielding/computeDecays
-    fMessenger->DeclareMethod("computeDecays",
-        &detectorShielding::ComputeDecaysForLayer)
-        .SetGuidance("Compute decays: <layer> <activity_Bq_per_kg>")
-        .SetParameterName("input", false);*/
-    fMessenger->DeclareMethod(
-        "computeDecays",
-        &detectorShielding::ComputeDecaysForLayer,
-        "Compute decays: <layerName> <activity_Bq_per_kg>"
-    );
+    fMessenger->DeclareMethod("setCu1Activity", &detectorShielding::SetCu1Activity)
+        .SetGuidance("Set Cu1 activity in Bq/kg")
+        .SetParameterName("activity", true);
 
+    fMessenger->DeclareMethod("setCu2Activity", &detectorShielding::SetCu2Activity)
+        .SetGuidance("Set Cu2 activity in Bq/kg")
+        .SetParameterName("activity", true);
+
+    fMessenger->DeclareMethod("setPb1Activity", &detectorShielding::SetPb1Activity)
+        .SetGuidance("Set Pb1 activity in Bq/kg")
+        .SetParameterName("activity", true);
+
+    fMessenger->DeclareMethod("setPb2Activity", &detectorShielding::SetPb2Activity)
+        .SetGuidance("Set Pb2 activity in Bq/kg")
+        .SetParameterName("activity", true);
     // /Shielding/autoBeamOn
     fMessenger->DeclareMethod("autoBeamOn",
             &detectorShielding::AutoBeamOn)
         .SetGuidance("Automatically runs beamOn with the total computed decays.");
+    
+    fMessenger->DeclareMethod("setDecays",
+            &detectorShielding::SetTotalDecays)
+        .SetGuidance("Directly set total number of decays to simulate.")
+        .SetParameterName("decays", false);
 
     fMessenger->DeclareMethodWithUnit("Cu1Thickness", "mm", 
         &detectorShielding::SetInnerCu1Thickness)
@@ -110,15 +124,12 @@ detectorShielding::~detectorShielding()
 // ------------------------------------------------------------
 G4VPhysicalVolume* detectorShielding::Construct()
 {
-        // If geometry parameters changed, we need to clean up and rebuild
     if (fGeometryDirty) {
         G4cout << "[Shielding] Geometry parameters changed, cleaning up old geometry..." << G4endl;
         
-        // Clean up old geometry
         G4PhysicalVolumeStore* pvStore = G4PhysicalVolumeStore::GetInstance();
         pvStore->Clean();
         
-        // Reset the flag
         fGeometryDirty = false;
         
         G4cout << "[Shielding] Old geometry cleaned, building new geometry..." << G4endl;
@@ -150,16 +161,18 @@ G4VPhysicalVolume* detectorShielding::DefineVolumes()
     auto physWorld  = new G4PVPlacement(nullptr, {}, logicWorld, "World", nullptr, false, 0, true);
 
     // HPGe
-    auto solidHPGe = new G4Box("HPGe", fHPGeHalfX, fHPGeHalfY, fHPGeHalfZ);
+    auto solidHPGe = new G4Tubs("HPGe", 0, fHPGeDiam, fHPGeHeight, 90.0 * deg, 360.0 * deg);
     auto logicHPGe = new G4LogicalVolume(solidHPGe, Ge, "HPGe");
-    new G4PVPlacement(nullptr, {}, logicHPGe, "HPGe", logicWorld, false, 0, true);
+    auto rot = new G4RotationMatrix();
+    rot->rotateX(90.0 * deg);
+    new G4PVPlacement(rot, {}, logicHPGe, "HPGe", logicWorld, false, 0, true);
 
     // --------------------------------------------------------
     // Compute cubic shells
     // --------------------------------------------------------
 
     G4double maxInner = std::max(
-        {fHPGeHalfX + fCavityHalfX, fHPGeHalfY + fCavityHalfY, fHPGeHalfZ + fCavityHalfZ});
+        {fHPGeHeight + fCavityHalfX, fHPGeDiam + fCavityHalfY});
 
     G4double cu1_inner = maxInner;
     G4double cu1_outer = cu1_inner + fInnerCu1Thickness;
@@ -204,17 +217,35 @@ G4VPhysicalVolume* detectorShielding::DefineVolumes()
     auto logicPb1 = makeShell("Pb1", pb1_inner, pb1_outer, Pb1Material, pb1Vis);
     auto logicPb2 = makeShell("Pb2", pb2_inner, pb2_outer, Pb2Material, pb2Vis);
 
+    G4cout << "=== Geometry Debug Info ===" << G4endl;
+    G4cout << "World size: " << worldSize/cm << " cm" << G4endl;
+    G4cout << "HPGe position at origin" << G4endl;
+    G4cout << "Shell dimensions:" << G4endl;
+    G4cout << "  Cu1: inner=" << cu1_inner/cm << "cm, outer=" << cu1_outer/cm << "cm" << G4endl;
+    G4cout << "  Cu2: inner=" << cu2_inner/cm << "cm, outer=" << cu2_outer/cm << "cm" << G4endl;
+    G4cout << "  Pb1: inner=" << pb1_inner/cm << "cm, outer=" << pb1_outer/cm << "cm" << G4endl;
+    G4cout << "  Pb2: inner=" << pb2_inner/cm << "cm, outer=" << pb2_outer/cm << "cm" << G4endl;
+
     return physWorld;
 }
 
-// ------------------------------------------------------------
-// Mass calculation for a layer
-// ------------------------------------------------------------
 G4double detectorShielding::GetLayerMass(const G4String& layer)
 {
+    G4cout << "=== GetLayerMass Debug ===" << G4endl;
+    G4cout << "Input layer: '" << layer << "'" << G4endl;
+
     // Determine inner & outer half-lengths
     G4double maxInner = std::max(
-        {fHPGeHalfX + fCavityHalfX, fHPGeHalfY + fCavityHalfY, fHPGeHalfZ + fCavityHalfZ});
+        {fHPGeHeight + fCavityHalfX, fHPGeDiam + fCavityHalfY});
+
+    G4cout << "maxInner calculation:" << G4endl;
+    G4cout << "  fHPGeHalfX + fCavityHalfX = " << fHPGeDiam << " + " << fCavityHalfX 
+           << " = " << fHPGeDiam + fCavityHalfX << G4endl;
+    G4cout << "  fHPGeHalfY + fCavityHalfY = " << fHPGeHeight << " + " << fCavityHalfY 
+           << " = " << fHPGeHeight + fCavityHalfY << G4endl;
+    G4cout << "  fHPGeHalfZ + fCavityHalfZ = " << fHPGeDiam << " + " << fCavityHalfZ 
+           << " = " << fHPGeDiam + fCavityHalfZ << G4endl;
+    G4cout << "  maxInner = " << maxInner << G4endl;
 
     G4double inner = 0;
     G4double outer = 0;
@@ -223,32 +254,73 @@ G4double detectorShielding::GetLayerMass(const G4String& layer)
     if (layer == "Cu1") {
         inner = maxInner;
         outer = inner + fInnerCu1Thickness;
-        mat = G4Material::GetMaterial("UltraPureCopper");
+        mat = G4Material::GetMaterial("G4_Cu");
+        G4cout << "Processing Cu1 layer:" << G4endl;
+        G4cout << "  inner = " << inner << G4endl;
+        G4cout << "  fInnerCu1Thickness = " << fInnerCu1Thickness << G4endl;
+        G4cout << "  outer = " << inner << " + " << fInnerCu1Thickness << " = " << outer << G4endl;
     }
     else if (layer == "Cu2") {
         inner = maxInner + fInnerCu1Thickness;
         outer = inner + fInnerCu2Thickness;
-        mat = G4Material::GetMaterial("ImpureCopper");
+        mat = G4Material::GetMaterial("G4_Cu");
+        G4cout << "Processing Cu2 layer:" << G4endl;
+        G4cout << "  inner = " << maxInner << " + " << fInnerCu1Thickness << " = " << inner << G4endl;
+        G4cout << "  fInnerCu2Thickness = " << fInnerCu2Thickness << G4endl;
+        G4cout << "  outer = " << inner << " + " << fInnerCu2Thickness << " = " << outer << G4endl;
     }
     else if (layer == "Pb1") {
         inner = maxInner + fInnerCu1Thickness + fInnerCu2Thickness;
         outer = inner + fOuterPb1Thickness;
-        mat = G4Material::GetMaterial("LowBackgroundLead");
+        mat = G4Material::GetMaterial("G4_Pb");
+        G4cout << "Processing Pb1 layer:" << G4endl;
+        G4cout << "  inner = " << maxInner << " + " << fInnerCu1Thickness << " + " 
+               << fInnerCu2Thickness << " = " << inner << G4endl;
+        G4cout << "  fOuterPb1Thickness = " << fOuterPb1Thickness << G4endl;
+        G4cout << "  outer = " << inner << " + " << fOuterPb1Thickness << " = " << outer << G4endl;
     }
     else if (layer == "Pb2") {
         inner = maxInner + fInnerCu1Thickness + fInnerCu2Thickness + fOuterPb1Thickness;
         outer = inner + fOuterPb2Thickness;
-        mat = G4Material::GetMaterial("ImpureLead");
+        mat = G4Material::GetMaterial("G4_Pb");
+        G4cout << "Processing Pb2 layer:" << G4endl;
+        G4cout << "  inner = " << maxInner << " + " << fInnerCu1Thickness << " + " 
+               << fInnerCu2Thickness << " + " << fOuterPb1Thickness << " = " << inner << G4endl;
+        G4cout << "  fOuterPb2Thickness = " << fOuterPb2Thickness << G4endl;
+        G4cout << "  outer = " << inner << " + " << fOuterPb2Thickness << " = " << outer << G4endl;
     }
     else {
+        G4cout << "ERROR: Unknown layer name '" << layer << "'" << G4endl;
         G4Exception("GetLayerMass","BadLayer",FatalException,"Bad layer name.");
     }
 
-    // shell volume
+    // Debug material lookup
+    if (mat == nullptr) {
+        G4cout << "ERROR: Material is null for layer '" << layer << "'!" << G4endl;
+        G4Exception("GetLayerMass","NullMaterial",FatalException,"Material not found.");
+    } else {
+        G4cout << "Material: " << mat->GetName() << G4endl;
+        G4cout << "Material density: " << mat->GetDensity()/(kg/m3) << " kg/m3" << G4endl;
+    }
+
+    // shell volume calculation
     G4double vol_mm3 = (std::pow(outer,3) - std::pow(inner,3)) * 8.0;
     G4double vol_m3 = vol_mm3 * 1e-9;
 
-    return mat->GetDensity() * vol_m3;
+    G4cout << "Volume calculation:" << G4endl;
+    G4cout << "  outer^3 = " << std::pow(outer,3) << G4endl;
+    G4cout << "  inner^3 = " << std::pow(inner,3) << G4endl;
+    G4cout << "  (outer^3 - inner^3) = " << (std::pow(outer,3) - std::pow(inner,3)) << G4endl;
+    G4cout << "  vol_mm3 = " << (std::pow(outer,3) - std::pow(inner,3)) << " * 8.0 = " << vol_mm3 << " mm3" << G4endl;
+    G4cout << "  vol_m3 = " << vol_mm3 << " * 1e-9 = " << vol_m3 << " m3" << G4endl;
+
+    G4double mass = mat->GetDensity()/(kg/m3) * vol_m3;
+    
+    G4cout << "Mass calculation:" << G4endl;
+    G4cout << "  mass = " << mat->GetDensity()/(kg/m3) << " * " << vol_m3 << " = " << mass << " kg" << G4endl;
+    G4cout << "=== End GetLayerMass Debug ===" << G4endl << G4endl;
+
+    return mass;
 }
 
 // ------------------------------------------------------------
@@ -260,69 +332,60 @@ void detectorShielding::SetSimulationTime(G4double time)
     G4cout << "[Shielding] Simulation time set to " << fSimTime << " s" << G4endl;
 }
 
-void detectorShielding::ComputeDecaysForLayer(const G4String& input)
+
+
+void detectorShielding::SetCu1Activity(G4double activityPerKg)
 {
-    std::istringstream iss(input);
-    std::string name;
-    double activityPerKg;
+    SetLayerActivityForName("Cu1", activityPerKg);
+}
 
-    if (!(iss >> name >> activityPerKg)) {
-    G4Exception("ComputeDecaysForLayer",
-                "BadInput", JustWarning,
-                "Usage: /Shielding/computeDecays <layerName> <activity_Bq_per_kg>");
-    return;
-    }
+void detectorShielding::SetCu2Activity(G4double activityPerKg)
+{
+    SetLayerActivityForName("Cu2", activityPerKg);
+}
 
-    if (layerMap.count(name) == 0) {
-        G4Exception("ComputeDecaysForLayer",
-                    "BadLayer", JustWarning,
-                    ("Unknown layer name: " + name).c_str());
-        return;
-    }
+void detectorShielding::SetPb1Activity(G4double activityPerKg)
+{
+    SetLayerActivityForName("Pb1", activityPerKg);
+}
 
-    int layerIndex = layerMap[name];
+void detectorShielding::SetPb2Activity(G4double activityPerKg)
+{
+    SetLayerActivityForName("Pb2", activityPerKg);
+}
 
-    // --- Now do the real work ---
-    G4cout << "Computing decays for layer " << name
-           << " (index = " << layerIndex
-           << "), activity = " << activityPerKg << " Bq/kg" << G4endl;
-
-    G4double mass = GetLayerMass(name);      // kg
-    G4double activity = mass * activityPerKg; // Bq
-    G4double decays = activity * fSimTime;    // N = A·t
+void detectorShielding::SetLayerActivityForName(const G4String& name, G4double activityPerKg)
+{
+    G4double mass = GetLayerMass(name);
+    G4double activity = mass * activityPerKg;
+    G4int decays = static_cast<G4int>(activity * fSimTime);
 
     G4cout << "[Shielding] Layer: " << name
            << ", Mass: " << mass << " kg"
-           << ", Activity = " << activity << " Bq"
-           << ", Decays = " << decays
-           << G4endl;
+           << ", Activity = " << activity << " Bq" 
+           << ", Decays = " << decays << G4endl;
 
-    AddDecays(decays);
+    G4cout << "[DEBUG] Before adding: fTotalDecays = " << fTotalDecays << G4endl;
+    fTotalDecays += decays;
+    G4cout << "[DEBUG] After adding: fTotalDecays = " << fTotalDecays << G4endl;
 }
 
-void detectorShielding::AddDecays(G4double n)
-{
-        fTotalDecays += n;
-}
-
-G4double detectorShielding::GetTotalDecays() const
-{
-        return fTotalDecays;
-}
+//G4int GetTotalDecays() const { return fTotalDecays; }
 
 void detectorShielding::AutoBeamOn()
 {
+    G4cout << "[AutoBeamOn] fTotalDecays = " << fTotalDecays << G4endl;
+    
     if (fTotalDecays <= 0) {
         G4Exception("AutoBeamOn", "NoDecays", JustWarning,
-                    "Total decays = 0. Did you forget to call computeDecays?");
+                    "Total decays = 0. Did you set simulation time and activities?");
         return;
     }
 
     G4cout << "[Shielding] AutoBeamOn launching: " 
            << fTotalDecays << " events" << G4endl;
 
-    // Call Geant4 run manager
-    G4RunManager::GetRunManager()->BeamOn((G4int) fTotalDecays);
+    G4RunManager::GetRunManager()->BeamOn(fTotalDecays);
 }
 
 // ------------------------------------------------------------
@@ -419,3 +482,31 @@ void detectorShielding::SetCavityHalfZ(G4double halfZ)
     G4cout << "[Shielding] Cavity half Z set to " << fCavityHalfZ/mm << " mm" << G4endl;
 }
 
+void detectorShielding::ConstructSDandField()
+{
+    G4SDManager* sdManager = G4SDManager::GetSDMpointer();
+    
+    // Create sensitive detector for HPGe
+    SensitiveDetector* hpgeSD = new SensitiveDetector("HPGeSD");
+    sdManager->AddNewDetector(hpgeSD);
+    
+    // Set the sensitive detector to the HPGe logical volume
+    G4LogicalVolume* hpgeLV = G4LogicalVolumeStore::GetInstance()->GetVolume("HPGe");
+    if (hpgeLV) {
+        hpgeLV->SetSensitiveDetector(hpgeSD);
+        G4cout << "[Shielding] Sensitive detector assigned to HPGe" << G4endl;
+    } else {
+        G4Exception("detectorShielding::ConstructSDandField", "SD001", 
+                   FatalException, "HPGe logical volume not found!");
+    }
+}
+
+void detectorShielding::SetTotalDecays(G4int decays)
+{
+    if (decays < 0) decays = 0;
+
+    fTotalDecays = decays;
+
+    G4cout << "[Shielding] Total decays manually set to "
+           << fTotalDecays << G4endl;
+}

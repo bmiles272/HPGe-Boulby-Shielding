@@ -5,64 +5,62 @@
 #include "G4SystemOfUnits.hh"
 #include <iomanip>
 
-SensitiveDetector::SensitiveDetector(const G4String& name, const G4String& outputFile)
-  : G4VSensitiveDetector(name)
-{
-  fOutFile.open(outputFile, std::ios::out | std::ios::app);
-  if (fOutFile.is_open()) {
-    fOutFile << "# EventID\tTrackID\tTotalTrackLength_mm\tFinalVolume" << std::endl;
-  }
-}
+SensitiveDetector::SensitiveDetector(const G4String& name)
+  : G4VSensitiveDetector(name),
+    fTotalEnergyDeposit(0.0),
+    fNHits(0)
+{}
 
 SensitiveDetector::~SensitiveDetector()
-{
-  if (fOutFile.is_open()) fOutFile.close();
-}
+{}
 
 void SensitiveDetector::Initialize(G4HCofThisEvent*)
 {
-  // Reset track data for this event
-  fTrackData.clear();
+  fTotalEnergyDeposit = 0.0;
+  fNHits = 0;
 }
 
 G4bool SensitiveDetector::ProcessHits(G4Step* step, G4TouchableHistory*)
 {
-  G4Track* track = step->GetTrack();
+    //auto particle = step->GetTrack()->GetParticleDefinition()->GetParticleName();
+    //if (particle != "gamma") 
+        //return false;
+    
+    G4double edep = step->GetTotalEnergyDeposit();
+    if (edep == 0.) return false;
 
-  // ✅ Only process primary gammas (parentID == 0)
-  if (track->GetDefinition()->GetParticleName() != "gamma") return false;
-  if (track->GetParentID() != 0) return false;  // skip secondaries
+    fTotalEnergyDeposit += edep;
+    fNHits++;
 
-  G4int trackID = track->GetTrackID();
+    auto analysisManager = G4AnalysisManager::Instance();
+    
+    std::string particleName = step->GetTrack()->GetParticleDefinition()->GetParticleName();
+    if (particleName != "gamma") return false;
 
-  // Accumulate total path length
-  fTrackData[trackID].totalLength += step->GetStepLength();
+    analysisManager->FillNtupleDColumn(0, 0, edep);
+    analysisManager->FillNtupleDColumn(0, 1, edep/keV); 
+    analysisManager->FillNtupleDColumn(0, 2, step->GetTrack()->GetTrackID());
+    analysisManager->FillNtupleSColumn(0, 3, particleName);
+    analysisManager->FillNtupleDColumn(0, 4, step->GetPreStepPoint()->GetGlobalTime()/ns);
+    analysisManager->AddNtupleRow(0);
 
-  // If the gamma stops, record where
-  if (track->GetTrackStatus() == fStopAndKill)
-  {
-    auto postVol = step->GetPostStepPoint()->GetPhysicalVolume();
-    fTrackData[trackID].finalVolume = postVol ? postVol->GetName() : "OutsideWorldVolume";
-  }
-
-  return true;
+    analysisManager->FillH1(0, edep);
+    
+    return true;
 }
 
 void SensitiveDetector::EndOfEvent(G4HCofThisEvent*)
 {
-  // Each event can have many primary gammas
-  G4int eventID = G4RunManager::GetRunManager()->GetCurrentEvent()->GetEventID();
-
-  for (auto& [trackID, data] : fTrackData)
-  {
-    if (fOutFile.is_open()) {
-      fOutFile << eventID << "\t"
-               << trackID << "\t"
-               << std::fixed << std::setprecision(3)
-               << data.totalLength/mm << "\t"
-               << data.finalVolume << std::endl;
+    auto analysisManager = G4AnalysisManager::Instance();
+    G4int eventID = G4RunManager::GetRunManager()->GetCurrentEvent()->GetEventID();
+    
+    if (fTotalEnergyDeposit > 0) {
+        analysisManager->FillNtupleDColumn(1, 0, eventID);            
+        analysisManager->FillNtupleDColumn(1, 1, fTotalEnergyDeposit);  
+        analysisManager->FillNtupleDColumn(1, 2, fTotalEnergyDeposit/keV); 
+        analysisManager->FillNtupleDColumn(1, 3, fNHits);      
+        analysisManager->AddNtupleRow(1);
+        
+        analysisManager->FillH1(1, fTotalEnergyDeposit);
     }
   }
-
-  fOutFile.flush();
-}
